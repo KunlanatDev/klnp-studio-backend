@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/klnp-studio/backend/internal/modules/workspace/application"
+	"github.com/klnp-studio/backend/internal/modules/workspace/domain"
 	"github.com/klnp-studio/backend/internal/security/middleware"
 	appErrors "github.com/klnp-studio/backend/internal/shared/errors"
 	"github.com/klnp-studio/backend/internal/shared/response"
@@ -76,6 +77,10 @@ func (h *WorkspaceHandler) List(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(
 			response.Fail("INTERNAL_ERROR", "failed to list workspaces", nil),
 		)
+	}
+
+	if workspaces == nil {
+		workspaces = make([]domain.WorkspaceWithRole, 0)
 	}
 
 	return c.JSON(response.Success(workspaces, nil))

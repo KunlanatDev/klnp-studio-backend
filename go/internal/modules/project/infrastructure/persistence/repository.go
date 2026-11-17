@@ -45,12 +45,17 @@ func (r *ProjectRepository) Create(
 	baseSlug := toSlug(input.Name)
 	slug := fmt.Sprintf("%s-%s", baseSlug, projID[:8])
 
+	desc := ""
+	if input.Description != nil {
+		desc = *input.Description
+	}
+
 	proj := &ProjectModel{
 		ID:          projID,
 		WorkspaceID: input.WorkspaceID,
 		Name:        input.Name,
 		Slug:        slug,
-		Description: input.Description,
+		Description: &desc,
 		Icon:        input.Icon,
 		Platform:    "mobile",
 		Status:      "active",
@@ -73,17 +78,19 @@ func (r *ProjectRepository) Create(
 
 		// 2. Create initial Home Page (Quota trigger will verify free page entitlement)
 		homePage := map[string]any{
-			"id":           homePageID,
-			"workspace_id": input.WorkspaceID,
-			"project_id":   projID,
-			"name":         "Home",
-			"slug":         "home",
-			"position":     0,
-			"is_home":      true,
-			"status":       "active",
-			"created_by":   input.CreatedBy,
-			"created_at":   time.Now().UTC(),
-			"updated_at":   time.Now().UTC(),
+			"id":               homePageID,
+			"workspace_id":     input.WorkspaceID,
+			"project_id":       projID,
+			"name":             "Home",
+			"slug":             "home",
+			"route":            "/",
+			"position":         0,
+			"is_home":          true,
+			"status":           "active",
+			"document_version": 1,
+			"created_by":       input.CreatedBy,
+			"created_at":       time.Now().UTC(),
+			"updated_at":       time.Now().UTC(),
 		}
 
 		if err := tx.Table("pages").Create(homePage).Error; err != nil {
@@ -108,7 +115,7 @@ func (r *ProjectRepository) Create(
 		Description: proj.Description,
 		Icon:        proj.Icon,
 		Platform:    proj.Platform,
-		Status:      domain.ProjectStatus(proj.Status),
+		Status:      domain.ProjectActive,
 		PageCount:   1,
 		HomePageID:  homePageID,
 		CreatedBy:   proj.CreatedBy,
@@ -312,4 +319,3 @@ func (r *ProjectRepository) Delete(
 	}
 	return nil
 }
-

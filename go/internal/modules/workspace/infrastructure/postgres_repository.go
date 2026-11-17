@@ -38,7 +38,7 @@ func (r *PostgresWorkspaceRepository) CreateWithMember(ctx context.Context, ws *
 }
 
 func (r *PostgresWorkspaceRepository) ListByUserID(ctx context.Context, userID uuid.UUID) ([]domain.WorkspaceWithRole, error) {
-	var results []domain.WorkspaceWithRole
+	results := make([]domain.WorkspaceWithRole, 0)
 
 	err := r.db.WithContext(ctx).
 		Table("workspaces w").
