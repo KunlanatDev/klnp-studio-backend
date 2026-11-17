@@ -2,7 +2,9 @@ package persistence
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/klnp-studio/backend/internal/modules/entitlement/domain"
@@ -21,22 +23,25 @@ func (r *EntitlementRepository) Resolve(
 	ctx context.Context,
 	workspaceID string,
 ) (*domain.Entitlements, error) {
-	var raw []byte
+	var raw string
 
-	err := r.db.WithContext(ctx).
+	row := r.db.WithContext(ctx).
 		Raw(`SELECT public.s2_02_02_resolve_entitlements(?)`, workspaceID).
-		Scan(&raw).Error
+		Row()
 
-	if err != nil {
+	if err := row.Scan(&raw); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain.ErrNotFound
+		}
 		return nil, fmt.Errorf("resolve entitlement: %w", err)
 	}
 
-	if len(raw) == 0 || string(raw) == "null" {
+	if raw == "" || raw == "null" {
 		return nil, domain.ErrNotFound
 	}
 
 	var result domain.Entitlements
-	if err := json.Unmarshal(raw, &result); err != nil {
+	if err := json.Unmarshal([]byte(raw), &result); err != nil {
 		return nil, fmt.Errorf("decode entitlement: %w", err)
 	}
 
@@ -46,4 +51,3 @@ func (r *EntitlementRepository) Resolve(
 
 	return &result, nil
 }
-
