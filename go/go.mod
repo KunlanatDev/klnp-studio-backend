@@ -17,6 +17,7 @@ require (
 
 require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
+	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect

@@ -10,11 +10,12 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
 	"github.com/klnp-studio/backend/internal/config"
-	authHttp "github.com/klnp-studio/backend/internal/modules/auth/delivery/http"
+	authPresentation "github.com/klnp-studio/backend/internal/modules/auth/presentation"
+	documentPresentation "github.com/klnp-studio/backend/internal/modules/document/presentation"
 	entitlementPresentation "github.com/klnp-studio/backend/internal/modules/entitlement/presentation"
 	pagePresentation "github.com/klnp-studio/backend/internal/modules/page/presentation"
 	projectPresentation "github.com/klnp-studio/backend/internal/modules/project/presentation"
-	workspaceHttp "github.com/klnp-studio/backend/internal/modules/workspace/delivery/http"
+	workspacePresentation "github.com/klnp-studio/backend/internal/modules/workspace/presentation"
 	workspaceDomain "github.com/klnp-studio/backend/internal/modules/workspace/domain"
 	jwtverify "github.com/klnp-studio/backend/internal/security/jwt"
 	"github.com/klnp-studio/backend/internal/security/middleware"
@@ -22,12 +23,13 @@ import (
 
 type RouterOptions struct {
 	Verifier           jwtverify.TokenVerifier
-	AuthHandler        *authHttp.AuthHandler
-	WorkspaceHandler   *workspaceHttp.WorkspaceHandler
+	AuthHandler        *authPresentation.AuthHandler
+	WorkspaceHandler   *workspacePresentation.WorkspaceHandler
 	WorkspaceRepo      workspaceDomain.WorkspaceRepository
 	EntitlementHandler *entitlementPresentation.Handler
 	ProjectHandler     *projectPresentation.Handler
 	PageHandler        *pagePresentation.Handler
+	DocumentHandler    *documentPresentation.Handler
 }
 
 func NewRouter(cfg config.Config, opts ...RouterOptions) *fiber.App {
@@ -107,6 +109,14 @@ func NewRouter(cfg config.Config, opts ...RouterOptions) *fiber.App {
 					proj.Post("/:projectId/archive", middleware.RequireWorkspacePermission(opt.WorkspaceRepo, middleware.PermissionProjectWrite), opt.ProjectHandler.Archive)
 					proj.Post("/:projectId/restore", middleware.RequireWorkspacePermission(opt.WorkspaceRepo, middleware.PermissionProjectWrite), opt.ProjectHandler.Restore)
 					proj.Delete("/:projectId", middleware.RequireWorkspacePermission(opt.WorkspaceRepo, middleware.PermissionProjectDelete), opt.ProjectHandler.Delete)
+				}
+
+				// Document Routes (design document of a page)
+				if opt.DocumentHandler != nil {
+					doc := api.Group("/workspaces/:workspaceId/projects/:projectId/pages/:pageId/document", authMiddleware)
+					doc.Get("", middleware.RequireWorkspacePermission(opt.WorkspaceRepo, middleware.PermissionPageRead), opt.DocumentHandler.Get)
+					doc.Patch("", middleware.RequireWorkspacePermission(opt.WorkspaceRepo, middleware.PermissionPageWrite), opt.DocumentHandler.ApplyPatch)
+					doc.Get("/operations", middleware.RequireWorkspacePermission(opt.WorkspaceRepo, middleware.PermissionPageRead), opt.DocumentHandler.ListOperations)
 				}
 
 				// Page Routes

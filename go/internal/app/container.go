@@ -7,14 +7,12 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/klnp-studio/backend/internal/config"
-	authDelivery "github.com/klnp-studio/backend/internal/modules/auth/delivery/http"
-	authInfra "github.com/klnp-studio/backend/internal/modules/auth/infrastructure"
+	"github.com/klnp-studio/backend/internal/modules/auth"
+	"github.com/klnp-studio/backend/internal/modules/document"
 	"github.com/klnp-studio/backend/internal/modules/entitlement"
 	"github.com/klnp-studio/backend/internal/modules/page"
 	"github.com/klnp-studio/backend/internal/modules/project"
-	workspaceApp "github.com/klnp-studio/backend/internal/modules/workspace/application"
-	workspaceDelivery "github.com/klnp-studio/backend/internal/modules/workspace/delivery/http"
-	workspaceInfra "github.com/klnp-studio/backend/internal/modules/workspace/infrastructure"
+	"github.com/klnp-studio/backend/internal/modules/workspace"
 	"github.com/klnp-studio/backend/internal/platform/database"
 	httpserver "github.com/klnp-studio/backend/internal/platform/http"
 	jwtverify "github.com/klnp-studio/backend/internal/security/jwt"
@@ -42,25 +40,23 @@ func New(cfg config.Config) (*Container, error) {
 		}
 	}
 
-	profileRepo := authInfra.NewPostgresProfileRepository(db)
-	authHandler := authDelivery.NewAuthHandler(profileRepo)
+	authModule := auth.New(db)
+	workspaceModule := workspace.New(db)
 
-	wsRepo := workspaceInfra.NewPostgresWorkspaceRepository(db)
-	wsUseCase := workspaceApp.NewWorkspaceUseCase(wsRepo)
-	wsHandler := workspaceDelivery.NewWorkspaceHandler(wsUseCase)
-
-	entitlementModule := entitlement.New(db, wsRepo)
+	entitlementModule := entitlement.New(db, workspaceModule.Repository)
 	projectModule := project.New(db)
 	pageModule := page.New(db)
+	documentModule := document.New(db)
 
 	router := httpserver.NewRouter(cfg, httpserver.RouterOptions{
 		Verifier:           verifier,
-		AuthHandler:        authHandler,
-		WorkspaceHandler:   wsHandler,
-		WorkspaceRepo:      wsRepo,
+		AuthHandler:        authModule.Handler,
+		WorkspaceHandler:   workspaceModule.Handler,
+		WorkspaceRepo:      workspaceModule.Repository,
 		EntitlementHandler: entitlementModule.Handler,
 		ProjectHandler:     projectModule.Handler,
 		PageHandler:        pageModule.Handler,
+		DocumentHandler:    documentModule.Handler,
 	})
 
 	return &Container{
