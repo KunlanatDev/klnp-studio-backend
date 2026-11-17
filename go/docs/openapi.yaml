@@ -1,0 +1,414 @@
+openapi: 3.1.0
+info:
+  title: KLNP Studio API
+  version: 1.0.0
+  description: Core backend API for KLNP Studio authentication, user profile, and workspace management.
+
+servers:
+  - url: /api/v1
+    description: Current API version
+
+security:
+  - bearerAuth: []
+
+paths:
+  /me:
+    get:
+      summary: Get current user profile
+      operationId: getMe
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileResponse"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update current user profile
+      operationId: updateMe
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name:
+                  type: string
+                  maxLength: 80
+                avatar_url:
+                  type: string
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileResponse"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /workspaces:
+    get:
+      summary: List user workspaces
+      operationId: listWorkspaces
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Workspaces list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceListResponse"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create workspace
+      operationId: createWorkspace
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, slug]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 80
+                slug:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  pattern: "^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$"
+      responses:
+        "201":
+          description: Workspace created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Slug conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /workspaces/{workspaceId}:
+    parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get workspace details
+      operationId: getWorkspace
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Workspace details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceResponse"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Workspace not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update workspace
+      operationId: updateWorkspace
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 80
+      responses:
+        "200":
+          description: Workspace updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceResponse"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Owner permission required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Workspace not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /workspaces/{workspaceId}/entitlements:
+    parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get workspace entitlements, limits, and usage
+      operationId: getWorkspaceEntitlements
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Workspace entitlements resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntitlementResponse"
+        "401":
+          description: Unauthenticated
+        "403":
+          description: Forbidden
+        "404":
+          description: Workspace not found
+        "503":
+          description: Entitlement not found or unavailable
+
+  /workspaces/{workspaceId}/plan:
+    parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get active workspace plan
+      operationId: getWorkspacePlan
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Active plan details
+        "401":
+          description: Unauthenticated
+        "404":
+          description: Workspace not found
+
+  /workspaces/{workspaceId}/usage:
+    parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get workspace usage metrics
+      operationId: getWorkspaceUsage
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Usage details
+        "401":
+          description: Unauthenticated
+        "404":
+          description: Workspace not found
+
+  /workspaces/{workspaceId}/features:
+    parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get workspace feature flags and configuration
+      operationId: getWorkspaceFeatures
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Feature list
+        "401":
+          description: Unauthenticated
+        "404":
+          description: Workspace not found
+
+  /workspaces/{workspaceId}/limits:
+    parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get workspace quota limits
+      operationId: getWorkspaceLimits
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Limits list
+        "401":
+          description: Unauthenticated
+        "404":
+          description: Workspace not found
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Profile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        avatar_url:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Workspace:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        role:
+          type: string
+          enum: [owner, admin, editor, viewer]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/Profile"
+
+    WorkspaceResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/Workspace"
+
+    WorkspaceListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Workspace"
+
+    ErrorDetail:
+      type: object
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                $ref: "#/components/schemas/ErrorDetail"
